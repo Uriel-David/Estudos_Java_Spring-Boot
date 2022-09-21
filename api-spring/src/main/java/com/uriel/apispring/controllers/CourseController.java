@@ -3,7 +3,7 @@ package com.uriel.apispring.controllers;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,55 +14,50 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.uriel.apispring.models.Course;
-import com.uriel.apispring.repository.CourseRepository;
+import com.uriel.apispring.dto.CourseDTO;
+import com.uriel.apispring.dto.CourseRequestDTO;
+import com.uriel.apispring.service.CourseService;
 
-import lombok.AllArgsConstructor;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
+@Validated
 @RestController
-@RequestMapping("/api/courses")
-@AllArgsConstructor
+@RequestMapping("api/courses")
 public class CourseController {
 
-    private final CourseRepository courseRepository;
+    private final CourseService courseService;
+
+    public CourseController(CourseService courseService) {
+        this.courseService = courseService;
+    }
 
     @GetMapping
-    public List<Course> getList() {
-        return courseRepository.findAll();
+    public List<CourseDTO> findAll() {
+        return courseService.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Course> findById(@PathVariable Long id) {
-        return courseRepository.findById(id)
-                .map(recordFound -> ResponseEntity.ok().body(recordFound))
-                .orElse(ResponseEntity.notFound().build());
+    public CourseDTO findById(@PathVariable @Positive @NotNull Long id) {
+        return courseService.findById(id);
     }
 
     @PostMapping
     @ResponseStatus(code = HttpStatus.CREATED)
-    public Course create(@RequestBody Course course) {
-        return courseRepository.save(course);
+    public CourseDTO create(@RequestBody @Valid CourseRequestDTO course) {
+        return courseService.create(course);
     }
 
-    @PutMapping
-    public ResponseEntity<Course> update(@PathVariable Long id, @RequestBody Course course) {
-        return courseRepository.findById(id)
-                .map(recordFound -> {
-                    recordFound.setName(course.getName());
-                    recordFound.setCategory(course.getCategory());
-                    Course updated = courseRepository.save(recordFound);
-                    return ResponseEntity.ok().body(updated);
-                })
-                .orElse(ResponseEntity.notFound().build());
+    @PutMapping(value = "/{id}")
+    public CourseDTO update(@PathVariable @Positive @NotNull Long id,
+            @RequestBody @Valid CourseRequestDTO course) {
+        return courseService.update(id, course);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        return courseRepository.findById(id)
-                .map(recordFound -> {
-                    courseRepository.deleteById(id);
-                    return ResponseEntity.noContent().<Void>build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+    @ResponseStatus(code = HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable @Positive @NotNull Long id) {
+        courseService.delete(id);
     }
 }
